@@ -180,3 +180,4 @@ Der RUB-Login schaltet die vom Portal gesehene Quell-/NAT-IP frei. Hinter einem
 gemeinsamen Router kann das deshalb auch anderen Geräten dieses Anschlusses
 helfen; bei einer eigenen Client-IP betrifft es nur die Wetteruhr. Die Funktion
 ist für das RUB-Lock-and-Key-Portal gedacht, nicht für eduroam oder RUB-Guests.
+# InternetKepperWeatherclock-ESP32-2432S028
