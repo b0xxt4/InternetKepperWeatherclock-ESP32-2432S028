@@ -12,7 +12,7 @@ Der fest konfigurierte Wetterort ist:
 - ungefähr 131 m über NN
 - Zeitzone Europe/Berlin mit automatischer Sommerzeit
 
-## Funktionen
+## Funktionen1
 
 - große, per NTP synchronisierte Uhr
 - aktuelles Wetter mit selbst gezeichnetem Symbol
