@@ -1,1 +1,10 @@
-secrets.h
+# Persönliche Zugangsdaten
+/include/secrets.h
+
+# PlatformIO
+/.pio/
+/.vscode/
+
+# Python
+/__pycache__/
+*.pyc
