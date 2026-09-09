@@ -62,6 +62,7 @@ bool rangesAreValid(const WeatherSnapshot &snapshot) {
       snapshot.apparent_temperature_tenths > 900 ||
       snapshot.humidity > 100 || snapshot.weather_code > 99 ||
       snapshot.wind_speed_tenths > 3000 ||
+      snapshot.uv_index_tenths > 400 ||
       snapshot.pressure_tenths < 8000 ||
       snapshot.pressure_tenths > 12000 || snapshot.is_day > 1) {
     return false;
@@ -86,6 +87,7 @@ bool rangesAreValid(const WeatherSnapshot &snapshot) {
         point.minimum_tenths > 700 || point.maximum_tenths < -800 ||
         point.maximum_tenths > 700 ||
         point.minimum_tenths > point.maximum_tenths ||
+        point.uv_index_max_tenths > 400 ||
         point.rain_probability > 100 || point.weather_code > 99) {
       return false;
     }
@@ -210,6 +212,7 @@ void buildJsonFilter() {
   current["wind_speed_10m"] = true;
   current["pressure_msl"] = true;
   current["is_day"] = true;
+  current["uv_index"] = true;
 
   JsonObject hourly = json_filter["hourly"].to<JsonObject>();
   hourly["time"] = true;
@@ -225,6 +228,7 @@ void buildJsonFilter() {
   daily["weather_code"] = true;
   daily["sunrise"] = true;
   daily["sunset"] = true;
+  daily["uv_index_max"] = true;
 }
 
 bool parseWeatherDocument(WeatherSnapshot &snapshot) {
@@ -246,6 +250,7 @@ bool parseWeatherDocument(WeatherSnapshot &snapshot) {
   float humidity = 0.0F;
   float wind = 0.0F;
   float pressure = 0.0F;
+  float uv_index = 0.0F;
   int weather_code = 0;
   int is_day = 0;
   if (!copyFixedString(current["time"], snapshot.source_time,
@@ -257,6 +262,7 @@ bool parseWeatherDocument(WeatherSnapshot &snapshot) {
                   humidity) ||
       !readNumber(current["wind_speed_10m"], 0.0F, 300.0F, wind) ||
       !readNumber(current["pressure_msl"], 800.0F, 1200.0F, pressure) ||
+      !readNumber(current["uv_index"], 0.0F, 40.0F, uv_index) ||
       !readInteger(current["weather_code"], 0, 99, weather_code) ||
       !readInteger(current["is_day"], 0, 1, is_day)) {
     return false;
@@ -269,6 +275,8 @@ bool parseWeatherDocument(WeatherSnapshot &snapshot) {
       static_cast<uint16_t>(std::lround(wind * 10.0F));
   snapshot.pressure_tenths =
       static_cast<uint16_t>(std::lround(pressure * 10.0F));
+  snapshot.uv_index_tenths =
+      static_cast<uint16_t>(std::lround(uv_index * 10.0F));
   snapshot.weather_code = static_cast<uint8_t>(weather_code);
   snapshot.is_day = static_cast<uint8_t>(is_day);
 
@@ -313,13 +321,15 @@ bool parseWeatherDocument(WeatherSnapshot &snapshot) {
   JsonArrayConst daily_codes = daily["weather_code"].as<JsonArrayConst>();
   JsonArrayConst daily_sunrise = daily["sunrise"].as<JsonArrayConst>();
   JsonArrayConst daily_sunset = daily["sunset"].as<JsonArrayConst>();
+  JsonArrayConst daily_uv = daily["uv_index_max"].as<JsonArrayConst>();
   if (daily_dates.size() < weather_config::DAILY_POINTS ||
       daily_minimums.size() < weather_config::DAILY_POINTS ||
       daily_maximums.size() < weather_config::DAILY_POINTS ||
       daily_rain.size() < weather_config::DAILY_POINTS ||
       daily_codes.size() < weather_config::DAILY_POINTS ||
       daily_sunrise.size() < weather_config::DAILY_POINTS ||
-      daily_sunset.size() < weather_config::DAILY_POINTS) {
+      daily_sunset.size() < weather_config::DAILY_POINTS ||
+      daily_uv.size() < weather_config::DAILY_POINTS) {
     return false;
   }
 
@@ -327,6 +337,7 @@ bool parseWeatherDocument(WeatherSnapshot &snapshot) {
     DailyPoint &point = snapshot.daily[index];
     float minimum = 0.0F;
     float maximum = 0.0F;
+    float uv_maximum = 0.0F;
     int rain = 0;
     int code = 0;
     if (!copyFixedString(daily_dates[index], point.date, sizeof(point.date),
@@ -335,6 +346,7 @@ bool parseWeatherDocument(WeatherSnapshot &snapshot) {
         !copyClockPart(daily_sunset[index], point.sunset) ||
         !readNumber(daily_minimums[index], -80.0F, 70.0F, minimum) ||
         !readNumber(daily_maximums[index], -80.0F, 70.0F, maximum) ||
+        !readNumber(daily_uv[index], 0.0F, 40.0F, uv_maximum) ||
         minimum > maximum ||
         !readInteger(daily_rain[index], 0, 100, rain) ||
         !readInteger(daily_codes[index], 0, 99, code)) {
@@ -344,6 +356,8 @@ bool parseWeatherDocument(WeatherSnapshot &snapshot) {
         static_cast<int16_t>(std::lround(minimum * 10.0F));
     point.maximum_tenths =
         static_cast<int16_t>(std::lround(maximum * 10.0F));
+    point.uv_index_max_tenths =
+        static_cast<uint16_t>(std::lround(uv_maximum * 10.0F));
     point.rain_probability = static_cast<uint8_t>(rain);
     point.weather_code = static_cast<uint8_t>(code);
   }

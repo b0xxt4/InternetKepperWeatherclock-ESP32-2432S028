@@ -19,6 +19,7 @@ Der fest konfigurierte Wetterort ist:
 - Temperatur, gefühlte Temperatur, Feuchtigkeit, Wind und Regenrisiko
 - Verlauf für die nächsten acht Stunden
 - Vier-Tage-Vorhersage mit Sonnenauf- und -untergang
+- eigene UV-Ansicht mit aktuellem Index, Risikostufe und Tageshöchstwerten
 - große Touch-Schaltflächen für den resistiven Bildschirm
 - automatische Abdunkelung zwischen 22:00 und 07:00 Uhr
 - manueller Helligkeitswechsel durch Tippen auf die Uhr
@@ -111,6 +112,7 @@ Flash-Modus wechseln kann.
 - **JETZT:** Uhr und aktuelles Wetter
 - **STUNDEN:** Temperaturkurve und Regenwahrscheinlichkeit für acht Stunden
 - **TAGE:** Vier-Tage-Ausblick
+- **UV:** aktueller UV-Index, heutiges Maximum und Vier-Tage-Ausblick
 - **NETZ:** Details des InternetKeepers und Taste **JETZT PRUEFEN**
 - **Uhr antippen:** Automatik, volle Helligkeit und gedimmte Helligkeit
 
@@ -119,6 +121,12 @@ aktuelle Wetterdaten, Gelb einen laufenden Check oder ältere Daten und Rot
 eine fehlende Verbindung oder einen fehlgeschlagenen Login. Ab 90 Minuten
 wird der Wetterpunkt gelb, ab zwölf Stunden rot. Alte Wetterdaten werden nicht
 durch eine fehlerhafte Antwort überschrieben.
+
+Die UV-Seite verwendet die international gebräuchlichen Stufen: unter 3
+**niedrig**, 3 bis unter 6 **mittel**, 6 bis unter 8 **hoch**, 8 bis unter 11
+**sehr hoch** und ab 11 **extrem**. Ab UV-Index 3 wird Sonnenschutz empfohlen;
+siehe die [Hinweise der WHO](https://www.who.int/news-room/questions-and-answers/item/radiation-the-ultraviolet-%28uv%29-index). Der Wert ist eine
+modellbasierte Vorhersage und kein Messwert des Displays.
 
 **JETZT PRUEFEN** startet denselben vollständigen Rundlauf wie die Automatik:
 WLAN verbinden, Internet prüfen, nötigenfalls anmelden, den Login extern

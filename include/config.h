@@ -36,17 +36,17 @@ constexpr int CONNECTIVITY_EXPECTED_STATUS_SECONDARY = 200;
 constexpr char CONNECTIVITY_EXPECTED_BODY_SECONDARY[] = "success";
 
 // Acht Stunden und vier Tage halten die JSON-Antwort klein und reichen für
-// die drei Wetteransichten des 320x240-Displays.
+// die Wetter- und UV-Ansichten des 320x240-Displays.
 constexpr char WEATHER_URL[] =
     "https://api.open-meteo.com/v1/forecast?"
     "latitude=51.4475741&longitude=7.2677644"
     "&current=temperature_2m%2Crelative_humidity_2m%2C"
     "apparent_temperature%2Cweather_code%2Cwind_speed_10m%2C"
-    "pressure_msl%2Cis_day"
+    "pressure_msl%2Cis_day%2Cuv_index"
     "&hourly=temperature_2m%2Cprecipitation_probability%2Cweather_code"
     "&forecast_hours=8"
     "&daily=weather_code%2Ctemperature_2m_max%2Ctemperature_2m_min%2C"
-    "precipitation_probability_max%2Csunrise%2Csunset"
+    "precipitation_probability_max%2Csunrise%2Csunset%2Cuv_index_max"
     "&forecast_days=4&timezone=Europe%2FBerlin";
 
 constexpr uint32_t WEATHER_REFRESH_MS = 15UL * 60UL * 1000UL;

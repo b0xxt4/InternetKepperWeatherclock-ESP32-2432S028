@@ -9,7 +9,7 @@
 namespace weatherclock {
 
 constexpr uint32_t SNAPSHOT_MAGIC = 0x57434C4BUL;  // "WCLK"
-constexpr uint16_t SNAPSHOT_SCHEMA = 1;
+constexpr uint16_t SNAPSHOT_SCHEMA = 2;
 
 enum class NetworkState : uint8_t {
   Unconfigured,
@@ -71,6 +71,7 @@ struct DailyPoint {
   char sunset[6];
   int16_t minimum_tenths;
   int16_t maximum_tenths;
+  uint16_t uv_index_max_tenths;
   uint8_t rain_probability;
   uint8_t weather_code;
 };
@@ -85,6 +86,7 @@ struct WeatherSnapshot {
   int16_t apparent_temperature_tenths;
   uint16_t pressure_tenths;
   uint16_t wind_speed_tenths;
+  uint16_t uv_index_tenths;
   uint8_t humidity;
   uint8_t weather_code;
   uint8_t is_day;

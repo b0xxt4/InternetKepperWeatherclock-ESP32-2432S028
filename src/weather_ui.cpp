@@ -30,11 +30,18 @@ constexpr uint16_t COLOR_SNOW = 0xDFFF;
 constexpr uint16_t COLOR_GOOD = 0x47E0;
 constexpr uint16_t COLOR_WARNING = 0xFD20;
 constexpr uint16_t COLOR_ERROR = 0xF986;
+constexpr uint16_t COLOR_UV_MODERATE = 0xFFE0;
+constexpr uint16_t COLOR_UV_HIGH = 0xFC00;
+constexpr uint16_t COLOR_UV_VERY_HIGH = 0xF800;
+constexpr uint16_t COLOR_UV_EXTREME = 0xF81F;
 
 constexpr int16_t HEADER_HEIGHT = 56;
 constexpr int16_t ATTRIBUTION_Y = 207;
 constexpr int16_t NAVIGATION_Y = 217;
 constexpr int16_t NAVIGATION_HEIGHT = 23;
+constexpr uint8_t PAGE_COUNT = 5;
+constexpr int16_t NAVIGATION_ITEM_WIDTH =
+    weather_config::DISPLAY_WIDTH / PAGE_COUNT;
 constexpr int16_t KEEPER_BUTTON_X = 190;
 constexpr int16_t KEEPER_BUTTON_Y = 136;
 constexpr int16_t KEEPER_BUTTON_WIDTH = 125;
@@ -42,8 +49,13 @@ constexpr int16_t KEEPER_BUTTON_HEIGHT = 66;
 constexpr int16_t CALIBRATION_MARGIN = 24;
 constexpr uint32_t TOUCH_CALIBRATION_MAGIC = 0x5443414CUL;  // "TCAL"
 
-enum class Page : uint8_t { Current, Hourly, Daily, Network };
+enum class Page : uint8_t { Current, Hourly, Daily, Uv, Network };
 enum class BrightnessMode : uint8_t { Automatic, Bright, Dim };
+
+static_assert(weather_config::DISPLAY_WIDTH % PAGE_COUNT == 0,
+              "Navigation tabs must divide the display width evenly");
+static_assert(static_cast<uint8_t>(Page::Network) + 1 == PAGE_COUNT,
+              "Page enum and navigation labels must stay in sync");
 
 struct RawPoint {
   int16_t x;
@@ -658,15 +670,20 @@ void drawAttribution() {
 }
 
 void drawNavigation() {
-  static const char *const LABELS[] = {"JETZT", "STUNDEN", "TAGE", "NETZ"};
-  for (uint8_t index = 0; index < 4; ++index) {
-    const int16_t x = index * 80;
+  static const char *const LABELS[] = {"JETZT", "STD.", "TAGE", "UV",
+                                      "NETZ"};
+  static_assert(sizeof(LABELS) / sizeof(LABELS[0]) == PAGE_COUNT,
+                "Page enum and navigation labels must stay in sync");
+  for (uint8_t index = 0; index < PAGE_COUNT; ++index) {
+    const int16_t x = index * NAVIGATION_ITEM_WIDTH;
     const bool selected = static_cast<uint8_t>(current_page) == index;
     const uint16_t background = selected ? COLOR_CARD_SELECTED : COLOR_CARD;
-    display.fillRect(x, NAVIGATION_Y, 79, NAVIGATION_HEIGHT, background);
+    display.fillRect(x, NAVIGATION_Y, NAVIGATION_ITEM_WIDTH - 1,
+                     NAVIGATION_HEIGHT, background);
     display.setTextDatum(MC_DATUM);
     display.setTextColor(selected ? TFT_WHITE : COLOR_MUTED, background);
-    display.drawString(LABELS[index], x + 39, NAVIGATION_Y + 11, 2);
+    display.drawString(LABELS[index], x + NAVIGATION_ITEM_WIDTH / 2,
+                       NAVIGATION_Y + 11, 2);
   }
 }
 
@@ -904,6 +921,89 @@ void drawDailyPage(const WeatherSnapshot *snapshot,
   }
 }
 
+uint16_t uvRiskColor(uint16_t uv_index_tenths) {
+  if (uv_index_tenths < 30) return COLOR_GOOD;
+  if (uv_index_tenths < 60) return COLOR_UV_MODERATE;
+  if (uv_index_tenths < 80) return COLOR_UV_HIGH;
+  if (uv_index_tenths < 110) return COLOR_UV_VERY_HIGH;
+  return COLOR_UV_EXTREME;
+}
+
+const char *uvRiskLabel(uint16_t uv_index_tenths) {
+  if (uv_index_tenths < 30) return "NIEDRIG";
+  if (uv_index_tenths < 60) return "MITTEL";
+  if (uv_index_tenths < 80) return "HOCH";
+  if (uv_index_tenths < 110) return "SEHR HOCH";
+  return "EXTREM";
+}
+
+void formatUvIndex(uint16_t tenths, char *buffer, size_t size) {
+  std::snprintf(buffer, size, "%.1f", tenths / 10.0F);
+}
+
+void drawUvPage(const WeatherSnapshot *snapshot,
+                const RuntimeStatus &status) {
+  display.fillRect(0, HEADER_HEIGHT, weather_config::DISPLAY_WIDTH,
+                   ATTRIBUTION_Y - HEADER_HEIGHT, COLOR_BACKGROUND);
+  if (snapshot == nullptr) {
+    drawNoData(status);
+    return;
+  }
+
+  display.setTextDatum(TL_DATUM);
+  display.setTextColor(TFT_WHITE, COLOR_BACKGROUND);
+  display.drawString("UV-Index", 8, 60, 4);
+  display.setTextDatum(TR_DATUM);
+  display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
+  display.drawString("Schutz ab UVI 3", 315, 67, 2);
+
+  constexpr int16_t CURRENT_X = 4;
+  constexpr int16_t CURRENT_Y = 88;
+  constexpr int16_t CURRENT_WIDTH = 312;
+  constexpr int16_t CURRENT_HEIGHT = 58;
+  const uint16_t current_color = uvRiskColor(snapshot->uv_index_tenths);
+  display.fillRoundRect(CURRENT_X, CURRENT_Y, CURRENT_WIDTH, CURRENT_HEIGHT, 6,
+                        COLOR_CARD);
+  display.fillRect(CURRENT_X, CURRENT_Y + CURRENT_HEIGHT - 5, CURRENT_WIDTH, 5,
+                   current_color);
+
+  display.setTextDatum(TL_DATUM);
+  display.setTextColor(COLOR_MUTED, COLOR_CARD);
+  display.drawString("AKTUELL", 13, 92, 1);
+  char uv_value[8];
+  formatUvIndex(snapshot->uv_index_tenths, uv_value, sizeof(uv_value));
+  display.setTextColor(current_color, COLOR_CARD);
+  display.drawString(uv_value, 12, 98, 6);
+  display.drawString(uvRiskLabel(snapshot->uv_index_tenths), 132, 95, 4);
+
+  char today_maximum[24];
+  formatUvIndex(snapshot->daily[0].uv_index_max_tenths, uv_value,
+                sizeof(uv_value));
+  std::snprintf(today_maximum, sizeof(today_maximum), "Tagesmax. %s", uv_value);
+  display.setTextColor(COLOR_MUTED, COLOR_CARD);
+  display.drawString(today_maximum, 134, 124, 2);
+
+  constexpr int16_t CARD_Y = 151;
+  constexpr int16_t CARD_WIDTH = 76;
+  constexpr int16_t CARD_HEIGHT = 53;
+  for (size_t index = 0; index < weather_config::DAILY_POINTS; ++index) {
+    const DailyPoint &point = snapshot->daily[index];
+    const int16_t x = 3 + static_cast<int16_t>(index) * 79;
+    const uint16_t color = uvRiskColor(point.uv_index_max_tenths);
+    display.fillRoundRect(x, CARD_Y, CARD_WIDTH, CARD_HEIGHT, 5, COLOR_CARD);
+    display.fillRect(x, CARD_Y + CARD_HEIGHT - 5, CARD_WIDTH, 5, color);
+
+    char day_buffer[4];
+    display.setTextDatum(TC_DATUM);
+    display.setTextColor(COLOR_MUTED, COLOR_CARD);
+    display.drawString(dayLabel(point, index, day_buffer), x + CARD_WIDTH / 2,
+                       CARD_Y + 4, 1);
+    formatUvIndex(point.uv_index_max_tenths, uv_value, sizeof(uv_value));
+    display.setTextColor(color, COLOR_CARD);
+    display.drawString(uv_value, x + CARD_WIDTH / 2, CARD_Y + 18, 4);
+  }
+}
+
 void formatKeeperTime(int64_t epoch, char buffer[6]) {
   if (epoch < 1704067200) {
     std::strcpy(buffer, "--:--");
@@ -1068,6 +1168,9 @@ void drawPage(const WeatherSnapshot *snapshot, const RuntimeStatus &status) {
     case Page::Daily:
       drawDailyPage(snapshot, status);
       break;
+    case Page::Uv:
+      drawUvPage(snapshot, status);
+      break;
     case Page::Network:
       drawNetworkPage(status.keeper);
       break;
@@ -1133,7 +1236,8 @@ void handleTouch(const KeeperRuntimeStatus &keeper_status) {
       int16_t y = 0;
       if (mapTouchPoint(average, x, y)) {
         if (y >= NAVIGATION_Y) {
-          const uint8_t button = std::min<uint8_t>(3, x / 80);
+          const uint8_t button = std::min<uint8_t>(
+              PAGE_COUNT - 1, x / NAVIGATION_ITEM_WIDTH);
           current_page = static_cast<Page>(button);
           full_redraw_requested = true;
         } else if (current_page == Page::Network &&
